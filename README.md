@@ -97,7 +97,7 @@ Note: In all subsequent steps below, while using multiple terminals/tabs, always
 
 2. Clone the repo
 ```
-git clone https://github.com/ranga4all1/stack-overflow-2023-ds.git
+git clone https://github.com/ranga4all1/stack-overflow-2023.git
 ```
 3. Install dependencies
 ```
