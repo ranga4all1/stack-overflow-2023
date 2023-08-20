@@ -11,7 +11,7 @@ Beyond its core compensation prediction focus, this initiative assumes an additi
 - **Machine learning (ML) Model**:
     - Machine learning algorithm used: **CatBoostRegressor**
     - Evaluation method: **Root mean squared error (RMSE)**
-    - Brief explanation of the obtained ML model:  SHapley Additive exPlanations (**SHAP**) 
+    - Brief explanation of the obtained ML model:  SHapley Additive exPlanations (**SHAP**)
 - **MLOps framework**: [MLOps maturity model](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/mlops/mlops-maturity-model)
 
 
@@ -45,7 +45,7 @@ CatBoost Regressor was chosen due to below features that match with our problem 
 
 ## MLOps
 
-MLOps brings DevOps principles to machine learning. It is a set of best practices to put ML models into production and automate the life-cycle. The extent to which MLOps is implemented into a team or organization could be expressed as maturity as explained in [MLOps maturity model](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/mlops/mlops-maturity-model). 
+MLOps brings DevOps principles to machine learning. It is a set of best practices to put ML models into production and automate the life-cycle. The extent to which MLOps is implemented into a team or organization could be expressed as maturity as explained in [MLOps maturity model](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/mlops/mlops-maturity-model).
 
 MLOps helps in:
 
@@ -79,7 +79,7 @@ Note: This project was entirely developed in cloud using:
 
 ### Prerequisites
 
-- Dataset downloaded (This step is NOT needed if you cloned entire repo)
+- Dataset downloaded
 - `anaconda` or `miniconda` with `conda` package manager
 - `pipenv`, `docker` and `docker-compose`
 - Access to gcs bucket on Google Cloud Platform (Free trial account is sufficient)
@@ -121,7 +121,7 @@ wget https://cdn.stackoverflow.co/files/jo7n4k8s/production/49915bfd46d0902c3564
 
    e. g. name: `rh-mlflow-cb-stack-overflow`
 
-   Note: Make sure to update commands in below steps to use your bucketname. 
+   Note: Make sure to update commands in below steps to use your bucketname.
 
     ![gcs-bucket](images/gcs-bucket.png)
 
@@ -133,7 +133,7 @@ mlflow server --backend-store-uri=sqlite:///mlflow.db --default-artifact-root=gs
 ```
 gcloud auth application-default login
 ```
-4. Train model using below scripts 
+4. Train model using below scripts
 ```
 python experiment-tracking/preprocess_data.py --raw_data_path data/raw --dest_path data/processed
 
@@ -152,7 +152,7 @@ python experiment-tracking/register_best_model.py --top_n 5
     ![mlflow-artifacts-gcs](images/mlflow-artifacts-gcs.png)
 
 
-5. Check GCS bucket for model artifacts at http://127.0.0.1:4200/api
+5. Check GCS bucket for model artifacts
 
     ![model-artifacts](images/model-artifacts.png)
 
@@ -198,7 +198,7 @@ prefect.yaml
 prefect deploy orchestration/orchestrate.py:main_flow -n stackoverflow1 -p catboost-pool
 ```
 
-5. To execute flow runs from this deployment, start a worker in a separate terminal that pulls work from the 
+5. To execute flow runs from this deployment, start a worker in a separate terminal that pulls work from the
 'catboost-pool' work pool:
 ```
 prefect worker start --pool 'catboost-pool'
@@ -209,22 +209,61 @@ prefect worker start --pool 'catboost-pool'
 prefect deployment run 'main-flow/stackoverflow1'
 ```
 7. Access PREFECT server at http://127.0.0.1:4200 and check deployment run status
-    
+
     Note: Alternatively if your deployment is not running, find Deployments/stackoverflow1 and click Run-> Quick run
 
     ![prefect-pools](images/prefect-deployment-run.png)
 
+8. Check GCS bucket and MLFLOW server for model artifacts again. Note down below parameters for flow 'train-best-model'.
 
-#### D) Deployment
+- run_id
+- logged_model path
 
-1) Batch
+You will need to use those parameters in next steps. Update scripts with your parameters whereever needed.
 
-2) Web-service-mlflow
 
+#### D) Batch Deployment
+
+I) Test batch scoring job from terminal tab using
+`python deployment/batch/score.py stack-overflow 2023 <run_id>`
+```
+python deployment/batch/score.py stack-overflow 2023 8ac5e4553c464697a9d70d833458e3d2
+```
+
+II) Schedule batch scoring job with Prefect in separate pipenv virtual env
+1. Create environment
+```
+cd deployment/batch
+
+pipenv --python=3.11
+pipenv install prefect==2.11.0 mlflow==2.5.0 catboost==1.2 pandas pyarrow gcsfs google-cloud-storage
+```
+2. Stop existing prefect servers. Start prefect server inside pipenv virtual env
+```
+pipenv shell
+prefect server start
+```
+3. From another terminal test score.py
+```
+cd deployment/batch
+
+pipenv shell
+python score.py stack-overflow 2023 8ac5e4553c464697a9d70d833458e3d2
+```
+
+III) Create prefect project and deployment
+```
+pipenv shell
+prefect project init
+
+prefect deploy score.py:comp_prediction -n comp_prediction_score-deploy -p default-agent-pool
+
+prefect worker start -p default-agent-pool -t process
+```
 
 #### E) Monitoring
 
-1) Evidently
+1) Evidently and Grafana - To be adressed in next iteration
 
 
 #### F) Next Steps
